@@ -3,13 +3,14 @@ import { generateCommand } from './commands/generate';
 import { initCommand } from './commands/init';
 import { statusCommand } from './commands/status';
 import { statsCommand } from './commands/stats';
+import { watchCommand } from './commands/watch';
 
 const program = new Command();
 
 program
   .name('astmap')
   .description('Static analysis index for AI coding tools')
-  .version('0.1.0');
+  .version('0.2.0');
 
 program
   .command('generate')
@@ -36,5 +37,11 @@ program
   .description('Show token count and size of generated manifest')
   .option('--cwd <path>', 'Project root directory', process.cwd())
   .action(statsCommand);
+
+program
+  .command('watch')
+  .description('Watch for file changes and regenerate manifest automatically')
+  .option('--cwd <path>', 'Project root directory', process.cwd())
+  .action(watchCommand);
 
 program.parse();

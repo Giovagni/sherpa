@@ -2,25 +2,24 @@ import { AnalysisResult } from './analyzer';
 
 export interface ManifestOptions {
   allSymbols?: boolean;
+  // Path aliases to apply — [realPathPrefix, shortAlias]. Loaded from astmap.config.json by callers.
+  aliases?: Array<[prefix: string, alias: string]>;
 }
-
-// Path prefixes to alias — ordered longest-first to avoid partial replacements.
-const PATH_ALIASES: Array<[prefix: string, alias: string]> = [
-  ['src/components/library/', '$lib/'],
-];
 
 export function generateManifest(
   result: AnalysisResult,
   generatedAt: Date = new Date(),
   opts: ManifestOptions = {}
 ): string {
+  const aliases = opts.aliases ?? [];
+  const aliasPath = (p: string) => applyAlias(p, aliases);
   const lines: string[] = [];
 
   lines.push(`# astmap — Codebase Index`);
   lines.push(`<!-- ${generatedAt.toISOString()} | ${result.files} files | ${result.symbols.length} symbols -->`);
 
   // Declare path aliases so the reader can resolve them back to real paths.
-  const activeAliases = PATH_ALIASES.filter(([prefix]) =>
+  const activeAliases = aliases.filter(([prefix]) =>
     result.exports.some(e => e.file.startsWith(prefix)) ||
     result.symbols.some(s => s.file.startsWith(prefix))
   );
@@ -36,7 +35,7 @@ export function generateManifest(
   const sortedExports = [...result.exports].sort((a, b) => a.file.localeCompare(b.file));
   for (const { file, names } of sortedExports) {
     if (!opts.allSymbols && isDefaultOnly(names)) continue;
-    lines.push(`${alias(file)}: ${names.join(' ')}`);
+    lines.push(`${aliasPath(file)}: ${names.join(' ')}`);
   }
   lines.push('');
 
@@ -49,7 +48,7 @@ export function generateManifest(
 
   for (const file of [...allFiles].sort()) {
     const importedBy = result.importedBy.get(file) ?? [];
-    if (importedBy.length > 0) lines.push(`${alias(file)} → ${importedBy.map(alias).join(' ')}`);
+    if (importedBy.length > 0) lines.push(`${aliasPath(file)} → ${importedBy.map(aliasPath).join(' ')}`);
   }
   lines.push('');
 
@@ -60,14 +59,14 @@ export function generateManifest(
   for (const sym of sortedSymbols) {
     if (!opts.allSymbols && isStringLiteralConst(sym)) continue;
     const sigPart = sym.signature ? `  ${sym.signature}` : '';
-    lines.push(`${sym.name}  ${alias(sym.file)}:${sym.line}  ${sym.kind}${sigPart}`);
+    lines.push(`${sym.name}  ${aliasPath(sym.file)}:${sym.line}  ${sym.kind}${sigPart}`);
   }
 
   return lines.join('\n');
 }
 
-function alias(p: string): string {
-  for (const [prefix, short] of PATH_ALIASES) {
+function applyAlias(p: string, aliases: Array<[prefix: string, alias: string]>): string {
+  for (const [prefix, short] of aliases) {
     if (p.startsWith(prefix)) return short + p.slice(prefix.length);
   }
   return p;

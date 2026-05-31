@@ -34,33 +34,38 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.generateCommand = generateCommand;
+exports.runGenerate = runGenerate;
 const fs = __importStar(require("fs"));
 const path = __importStar(require("path"));
 const analyzer_1 = require("../core/analyzer");
 const manifest_1 = require("../core/manifest");
+const config_1 = require("../core/config");
 const tokens_1 = require("../core/tokens");
 async function generateCommand(opts) {
     const cwd = path.resolve(opts.cwd);
+    await runGenerate(cwd, { full: opts.full, allSymbols: opts.allSymbols });
+}
+// Shared by generateCommand and watchCommand.
+async function runGenerate(cwd, opts = {}) {
     const start = Date.now();
+    const config = (0, config_1.loadConfig)(cwd);
     let result;
-    let mode;
     if (opts.full) {
         console.log(`astmap: full analysis of ${cwd}…`);
         result = (0, analyzer_1.analyze)(cwd);
-        mode = 'full';
     }
     else {
         const { result: r, changed, cached } = (0, analyzer_1.analyzeIncremental)(cwd);
         result = r;
-        if (changed === 0) {
-            mode = `incremental (${cached} files cached, 0 changed)`;
-        }
-        else {
-            mode = `incremental (${cached} cached, ${changed} re-analyzed)`;
-        }
+        const mode = changed === 0
+            ? `incremental (${cached} files cached, 0 changed)`
+            : `incremental (${cached} cached, ${changed} re-analyzed)`;
         console.log(`astmap: ${mode}`);
     }
-    const manifest = (0, manifest_1.generateManifest)(result, new Date(), { allSymbols: opts.allSymbols });
+    const manifest = (0, manifest_1.generateManifest)(result, new Date(), {
+        allSymbols: opts.allSymbols,
+        aliases: config.aliases,
+    });
     const outDir = path.join(cwd, '.claude');
     const outPath = path.join(outDir, 'manifest.md');
     fs.mkdirSync(outDir, { recursive: true });

@@ -1,6 +1,6 @@
 {
   "name": "astmap",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Static analysis index for AI coding tools — generates .claude/manifest.md",
   "bin": {
     "astmap": "./bin/astmap.js"

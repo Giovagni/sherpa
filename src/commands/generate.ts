@@ -2,6 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { analyze, analyzeIncremental, AnalysisResult } from '../core/analyzer';
 import { generateManifest } from '../core/manifest';
+import { loadConfig } from '../core/config';
 import { estimateTokens, TOKEN_WARN_THRESHOLD } from '../core/tokens';
 
 interface GenerateOptions {
@@ -12,27 +13,36 @@ interface GenerateOptions {
 
 export async function generateCommand(opts: GenerateOptions): Promise<void> {
   const cwd = path.resolve(opts.cwd);
+  await runGenerate(cwd, { full: opts.full, allSymbols: opts.allSymbols });
+}
+
+// Shared by generateCommand and watchCommand.
+export async function runGenerate(
+  cwd: string,
+  opts: { full?: boolean; allSymbols?: boolean } = {}
+): Promise<void> {
   const start = Date.now();
+  const config = loadConfig(cwd);
 
   let result: AnalysisResult;
-  let mode: string;
 
   if (opts.full) {
     console.log(`astmap: full analysis of ${cwd}…`);
     result = analyze(cwd);
-    mode = 'full';
   } else {
     const { result: r, changed, cached } = analyzeIncremental(cwd);
     result = r;
-    if (changed === 0) {
-      mode = `incremental (${cached} files cached, 0 changed)`;
-    } else {
-      mode = `incremental (${cached} cached, ${changed} re-analyzed)`;
-    }
+    const mode = changed === 0
+      ? `incremental (${cached} files cached, 0 changed)`
+      : `incremental (${cached} cached, ${changed} re-analyzed)`;
     console.log(`astmap: ${mode}`);
   }
 
-  const manifest = generateManifest(result, new Date(), { allSymbols: opts.allSymbols });
+  const manifest = generateManifest(result, new Date(), {
+    allSymbols: opts.allSymbols,
+    aliases: config.aliases,
+  });
+
   const outDir = path.join(cwd, '.claude');
   const outPath = path.join(outDir, 'manifest.md');
 

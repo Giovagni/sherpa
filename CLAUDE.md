@@ -10,13 +10,15 @@ A CLI tool that generates `.claude/manifest.md`: a compact static-analysis index
 src/
   cli.ts                  Commander entry point — defines all commands
   commands/
-    generate.ts           astmap generate — incremental by default, --full flag
+    generate.ts           astmap generate — incremental by default; exports runGenerate() for watch
     init.ts               generate + git hook + CLAUDE.md snippet suggestion
     stats.ts              token count / size of current manifest
     status.ts             exit 1 if manifest stale (for CI)
+    watch.ts              astmap watch — fs.watch + debounce, calls runGenerate() on changes
   core/
     analyzer.ts           ts-morph analysis — full + incremental entry points
     cache.ts              ManifestCache schema + load/save/reconstruct
+    config.ts             loadConfig() — reads astmap.config.json, falls back to built-in $lib/ alias
     files.ts              file discovery, .astmapignore, import resolution
     git.ts                post-commit hook install, isManifestStale
     manifest.ts           generateManifest() — formats AnalysisResult → markdown
@@ -77,9 +79,7 @@ Total reduction: **~−61%** from baseline.
 
 - **TypeScript compiler startup**: Incremental analysis for changed files still invokes ts-morph, which loads the TypeScript compiler. This costs ~1-3s per run regardless of how many files changed. The 0-change case is instant.
 
-- **No watch mode**: The git hook runs `astmap generate` after each commit. For active development, the manifest gets stale between commits. A future `astmap watch` command using `fs.watch()` or chokidar would fix this.
-
-- **Path aliases are hardcoded**: `PATH_ALIASES` in `manifest.ts` is not configurable. Future: read from `astmap.config.json` or `.astmapignore`-style file.
+- **Watch mode limitation on Linux**: `astmap watch` uses `fs.watch({ recursive: true })`, which works reliably on macOS and Windows but has known issues on Linux (requires inotify, limited to non-NFS filesystems).
 
 - **JS projects**: Supported (`allowJs: true` when no tsconfig), but without type information — signatures degrade to inferred types which may be verbose or wrong.
 
@@ -92,7 +92,6 @@ Total reduction: **~−61%** from baseline.
 
 ### Manifest size
 
-- **Configurable aliases**: Let users define `$app/=src/components/app/` etc. in a config file. High value for large monorepos with deep nesting.
 - **`--no-exports` flag**: Omit the Exports section entirely for projects where only the Symbol Index and Import Graph are needed. Saves ~975 tokens on web-os-portfolio.
 - **Signature truncation tuning**: Currently 120 chars max. Could expose as `--max-sig-length` flag.
 - **Prune leaf nodes from Import Graph**: Files that appear only as sources (never in `→`) are leaf components with no dependents. For large repos, omitting them could reduce graph size significantly.
@@ -100,7 +99,6 @@ Total reduction: **~−61%** from baseline.
 ### Features
 
 - **`--full-graph` flag**: Restore `←` (imports) lines in the Import Graph for when you need the dependency direction, not just the importedBy direction.
-- **`astmap watch`**: File watcher that runs incremental analysis on save. Could use `chokidar` or native `fs.watch`.
 - **`astmap query <symbol>`**: Print the manifest lines relevant to a single symbol — useful for scripting.
 - **Monorepo support**: Auto-detect workspaces and generate per-package manifests, then merge into a root manifest with package-prefixed aliases (`$core/`, `$ui/`).
 - **CLAUDE.md auto-patch**: `astmap init` could write the `@.claude/manifest.md` reference directly into CLAUDE.md instead of just printing the snippet.

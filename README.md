@@ -118,9 +118,25 @@ astmap generate --full
 astmap also applies automatic size reductions out of the box:
 - Barrel `index.ts` files that only re-export `default` are omitted from the Exports section
 - String-literal action type constants (e.g. `"CLOSE_APP"`) are omitted from the Symbol Index
-- Long path prefixes are compressed with aliases (`src/components/library/` → `$lib/`)
+- Long path prefixes are compressed with aliases (configurable — see below)
 
 Use `--all-symbols` to include everything if you need the unfiltered output.
+
+### Configuring path aliases
+
+By default, astmap compresses `src/components/library/` to `$lib/`. To define your own aliases, create `astmap.config.json` at the project root:
+
+```json
+{
+  "aliases": {
+    "$lib/": "src/components/library/",
+    "$ui/": "src/ui/",
+    "$api/": "src/services/api/"
+  }
+}
+```
+
+Key = short alias, value = real path prefix. Aliases are only emitted in the manifest header if files matching the prefix actually exist. When `astmap.config.json` is present, the built-in `$lib/` default is replaced entirely by the config — include it explicitly if you still want it.
 
 ---
 
@@ -132,6 +148,7 @@ Use `--all-symbols` to include everything if you need the unfiltered output.
 | `astmap generate --full` | Force full re-analysis, ignoring cache |
 | `astmap generate --all-symbols` | Include string-literal constants and barrel re-exports |
 | `astmap init` | Generate manifest + install git post-commit hook |
+| `astmap watch` | Watch for file changes and regenerate manifest automatically |
 | `astmap status` | Exit 1 if manifest is stale (useful in CI) |
 | `astmap stats` | Show token count and size of current manifest |
 
@@ -218,8 +235,7 @@ pnpm add -g github:Giovagni/astmap
 
 - **TypeScript/JS only** — `.js`/`.jsx` supported but without type information
 - **Local imports only** — third-party packages are not indexed
-- **No watch mode** — the git hook covers post-commit; between commits, run `astmap generate` manually
-- **Path aliases are hardcoded** in `src/core/manifest.ts` — may need adjustment for projects with different directory structures
+- **`astmap watch` on Linux** — uses `fs.watch({ recursive: true })`, which has known limitations on Linux (inotify, no NFS); works reliably on macOS and Windows
 - **Incremental is ~1–3s on changes** due to TypeScript compiler startup; the 0-change case is instant
 
 ---

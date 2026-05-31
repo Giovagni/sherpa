@@ -5,11 +5,12 @@ const generate_1 = require("./commands/generate");
 const init_1 = require("./commands/init");
 const status_1 = require("./commands/status");
 const stats_1 = require("./commands/stats");
+const watch_1 = require("./commands/watch");
 const program = new commander_1.Command();
 program
     .name('astmap')
     .description('Static analysis index for AI coding tools')
-    .version('0.1.0');
+    .version('0.2.0');
 program
     .command('generate')
     .description('Generate .claude/manifest.md from source analysis')
@@ -32,5 +33,10 @@ program
     .description('Show token count and size of generated manifest')
     .option('--cwd <path>', 'Project root directory', process.cwd())
     .action(stats_1.statsCommand);
+program
+    .command('watch')
+    .description('Watch for file changes and regenerate manifest automatically')
+    .option('--cwd <path>', 'Project root directory', process.cwd())
+    .action(watch_1.watchCommand);
 program.parse();
 //# sourceMappingURL=cli.js.map

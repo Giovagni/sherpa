@@ -1,16 +1,14 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.generateManifest = generateManifest;
-// Path prefixes to alias — ordered longest-first to avoid partial replacements.
-const PATH_ALIASES = [
-    ['src/components/library/', '$lib/'],
-];
 function generateManifest(result, generatedAt = new Date(), opts = {}) {
+    const aliases = opts.aliases ?? [];
+    const aliasPath = (p) => applyAlias(p, aliases);
     const lines = [];
     lines.push(`# astmap — Codebase Index`);
     lines.push(`<!-- ${generatedAt.toISOString()} | ${result.files} files | ${result.symbols.length} symbols -->`);
     // Declare path aliases so the reader can resolve them back to real paths.
-    const activeAliases = PATH_ALIASES.filter(([prefix]) => result.exports.some(e => e.file.startsWith(prefix)) ||
+    const activeAliases = aliases.filter(([prefix]) => result.exports.some(e => e.file.startsWith(prefix)) ||
         result.symbols.some(s => s.file.startsWith(prefix)));
     if (activeAliases.length > 0) {
         lines.push(`<!-- aliases: ${activeAliases.map(([p, a]) => `${a}=${p}`).join(', ')} -->`);
@@ -24,7 +22,7 @@ function generateManifest(result, generatedAt = new Date(), opts = {}) {
     for (const { file, names } of sortedExports) {
         if (!opts.allSymbols && isDefaultOnly(names))
             continue;
-        lines.push(`${alias(file)}: ${names.join(' ')}`);
+        lines.push(`${aliasPath(file)}: ${names.join(' ')}`);
     }
     lines.push('');
     // Layer 2: Import Graph — only → (importedBy) lines.
@@ -36,7 +34,7 @@ function generateManifest(result, generatedAt = new Date(), opts = {}) {
     for (const file of [...allFiles].sort()) {
         const importedBy = result.importedBy.get(file) ?? [];
         if (importedBy.length > 0)
-            lines.push(`${alias(file)} → ${importedBy.map(alias).join(' ')}`);
+            lines.push(`${aliasPath(file)} → ${importedBy.map(aliasPath).join(' ')}`);
     }
     lines.push('');
     // Layer 3: Symbol Index — one line per symbol
@@ -47,12 +45,12 @@ function generateManifest(result, generatedAt = new Date(), opts = {}) {
         if (!opts.allSymbols && isStringLiteralConst(sym))
             continue;
         const sigPart = sym.signature ? `  ${sym.signature}` : '';
-        lines.push(`${sym.name}  ${alias(sym.file)}:${sym.line}  ${sym.kind}${sigPart}`);
+        lines.push(`${sym.name}  ${aliasPath(sym.file)}:${sym.line}  ${sym.kind}${sigPart}`);
     }
     return lines.join('\n');
 }
-function alias(p) {
-    for (const [prefix, short] of PATH_ALIASES) {
+function applyAlias(p, aliases) {
+    for (const [prefix, short] of aliases) {
         if (p.startsWith(prefix))
             return short + p.slice(prefix.length);
     }

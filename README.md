@@ -1,11 +1,12 @@
 <div align="center">
   <img src=".github/logo.svg" width="88" height="88" alt="sherpa logo" />
-  <h1>sherpa</h1>
+  <h1>Sherpa</h1>
   <p>Pre-computed codebase index for AI coding tools</p>
 
-  ![version](https://img.shields.io/badge/version-0.2.0-3b82f6?style=flat-square)
-  ![node](https://img.shields.io/badge/node-%E2%89%A518-22c55e?style=flat-square)
-  ![license](https://img.shields.io/badge/license-MIT-f59e0b?style=flat-square)
+![version](https://img.shields.io/badge/version-0.2.0-3b82f6?style=flat-square)
+![node](https://img.shields.io/badge/node-%E2%89%A518-22c55e?style=flat-square)
+![license](https://img.shields.io/badge/license-MIT-f59e0b?style=flat-square)
+
 </div>
 
 ---
@@ -47,15 +48,15 @@ The `@` prefix tells Claude Code to load the manifest as context at session star
 
 ## Commands
 
-| Command | Description |
-| --- | --- |
-| `sherpa generate` | Incremental — only re-parses changed files (~20ms if nothing changed) |
-| `sherpa generate --full` | Force full re-analysis |
-| `sherpa generate --all-symbols` | Include filtered constants and default-only exports |
-| `sherpa watch` | Watch for file changes and regenerate automatically |
-| `sherpa init` | Generate manifest + install git post-commit hook |
-| `sherpa status` | Exit 1 if manifest is stale (useful in CI) |
-| `sherpa stats` | Show token count and size |
+| Command                         | Description                                                           |
+| ------------------------------- | --------------------------------------------------------------------- |
+| `sherpa generate`               | Incremental — only re-parses changed files (~20ms if nothing changed) |
+| `sherpa generate --full`        | Force full re-analysis                                                |
+| `sherpa generate --all-symbols` | Include filtered constants and default-only exports                   |
+| `sherpa watch`                  | Watch for file changes and regenerate automatically                   |
+| `sherpa init`                   | Generate manifest + install git post-commit hook                      |
+| `sherpa status`                 | Exit 1 if manifest is stale (useful in CI)                            |
+| `sherpa stats`                  | Show token count and size                                             |
 
 `--cwd <path>` available on all commands.
 
@@ -64,17 +65,20 @@ The `@` prefix tells Claude Code to load the manifest as context at session star
 Three sections, each targeting a different query type.
 
 **Exports** — what each file exposes:
+
 ```
 src/types/index.ts: Task DisplayState VolumeState ContextMenuOption Position
 src/reducers/index.ts: RootState default
 ```
 
 **Import Graph** — who imports each file (`→` = imported by):
+
 ```
 src/types/index.ts → src/actions/tasks.ts src/reducers/TasksReducer.ts $lib/Common/ContextMenu/ContextMenu.tsx
 ```
 
 **Symbols** — one line per exported symbol:
+
 ```
 Task      src/types/index.ts:1      interface
 closeApp  src/actions/tasks.ts:102  function  (data: { _id: string }) => CloseAppAction
@@ -113,11 +117,11 @@ Then run `sherpa generate --full`. If `sherpa stats` reports more than 8,000 tok
 
 ## Performance
 
-| Scenario | Time |
-| --- | --- |
-| No files changed | ~15–30ms (no TypeScript compiler) |
-| N files changed | ~1–3s (incremental, changed files + direct imports) |
-| Full analysis (111 files) | ~7–10s |
+| Scenario                  | Time                                                |
+| ------------------------- | --------------------------------------------------- |
+| No files changed          | ~15–30ms (no TypeScript compiler)                   |
+| N files changed           | ~1–3s (incremental, changed files + direct imports) |
+| Full analysis (111 files) | ~7–10s                                              |
 
 ## Known limitations
 

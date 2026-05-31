@@ -58,7 +58,7 @@ function findSourceFiles(cwd) {
 }
 function loadIgnorePatterns(cwd) {
     try {
-        const raw = fs.readFileSync(path.join(cwd, '.astmapignore'), 'utf8');
+        const raw = fs.readFileSync(path.join(cwd, '.sherpaignore'), 'utf8');
         return raw
             .split('\n')
             .map(l => l.trim())

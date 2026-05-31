@@ -39,7 +39,7 @@ const path = __importStar(require("path"));
 const generate_1 = require("./generate");
 const git_1 = require("../core/git");
 const GITIGNORE_LINES = [
-    '# astmap — local manifest (generated, not committed)',
+    '# sherpa — local manifest (generated, not committed)',
     '.claude/manifest.md',
     '.claude/manifest.cache.json',
 ];
@@ -47,7 +47,7 @@ const CLAUDE_MD_SNIPPET = `
 ## Codebase Index
 
 See @.claude/manifest.md for symbol definitions, exports, and dependency graph.
-Run \`astmap init\` once to generate it locally (the file is gitignored — each developer generates their own).
+Run \`sherpa init\` once to generate it locally (the file is gitignored — each developer generates their own).
 `;
 async function initCommand(opts) {
     const cwd = path.resolve(opts.cwd);
@@ -57,18 +57,18 @@ async function initCommand(opts) {
     patchGitignore(cwd);
     // 3. Install git hook
     const hookResult = (0, git_1.installPostCommitHook)(cwd);
-    console.log(`astmap: ${hookResult.message}`);
+    console.log(`sherpa: ${hookResult.message}`);
     // 4. Suggest CLAUDE.md update
     const claudeMdPath = path.join(cwd, 'CLAUDE.md');
     if (fs.existsSync(claudeMdPath)) {
         const content = fs.readFileSync(claudeMdPath, 'utf8');
         if (!content.includes('manifest.md')) {
-            console.log('\nastmap: add this to your CLAUDE.md to activate the index:');
+            console.log('\nsherpa: add this to your CLAUDE.md to activate the index:');
             console.log(CLAUDE_MD_SNIPPET);
         }
     }
     else {
-        console.log('\nastmap: no CLAUDE.md found. Add this snippet to get started:');
+        console.log('\nsherpa: no CLAUDE.md found. Add this snippet to get started:');
         console.log(CLAUDE_MD_SNIPPET);
     }
 }
@@ -79,11 +79,11 @@ function patchGitignore(cwd) {
         : '';
     const toAdd = GITIGNORE_LINES.filter(line => line.startsWith('#') || !existing.includes(line));
     if (toAdd.length === 0) {
-        console.log('astmap: .gitignore already contains manifest entries — skipping.');
+        console.log('sherpa: .gitignore already contains manifest entries — skipping.');
         return;
     }
     const separator = existing.endsWith('\n') || existing === '' ? '' : '\n';
     fs.writeFileSync(gitignorePath, existing + separator + toAdd.join('\n') + '\n', 'utf8');
-    console.log('astmap: added manifest entries to .gitignore (manifest will not be committed).');
+    console.log('sherpa: added manifest entries to .gitignore (manifest will not be committed).');
 }
 //# sourceMappingURL=init.js.map

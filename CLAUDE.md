@@ -1,4 +1,4 @@
-# astmap — Project Context for Claude
+# sherpa — Project Context for Claude
 
 ## What this is
 
@@ -10,21 +10,21 @@ A CLI tool that generates `.claude/manifest.md`: a compact static-analysis index
 src/
   cli.ts                  Commander entry point — defines all commands
   commands/
-    generate.ts           astmap generate — incremental by default; exports runGenerate() for watch
+    generate.ts           sherpa generate — incremental by default; exports runGenerate() for watch
     init.ts               generate + git hook + CLAUDE.md snippet suggestion
     stats.ts              token count / size of current manifest
     status.ts             exit 1 if manifest stale (for CI)
-    watch.ts              astmap watch — fs.watch + debounce, calls runGenerate() on changes
+    watch.ts              sherpa watch — fs.watch + debounce, calls runGenerate() on changes
   core/
     analyzer.ts           ts-morph analysis — full + incremental entry points
     cache.ts              ManifestCache schema + load/save/reconstruct
-    config.ts             loadConfig() — reads astmap.config.json, falls back to built-in $lib/ alias
-    files.ts              file discovery, .astmapignore, import resolution
+    config.ts             loadConfig() — reads sherpa.config.json, falls back to built-in $lib/ alias
+    files.ts              file discovery, .sherpaignore, import resolution
     git.ts                post-commit hook install, isManifestStale
     manifest.ts           generateManifest() — formats AnalysisResult → markdown
     tokens.ts             estimateTokens(), TOKEN_WARN_THRESHOLD (8000)
 bin/
-  astmap.js               CLI shebang entry (requires dist/cli.js)
+  sherpa.js               CLI shebang entry (requires dist/cli.js)
 ```
 
 ## Key design decisions
@@ -43,7 +43,7 @@ Uses `ts-morph` (TypeScript Compiler API wrapper) instead of regex parsing. This
 
 ### findSourceFiles is tsconfig-aware
 
-`files.ts` reads `tsconfig.json` to find `rootDir` or `include` patterns before walking. This ensures the file set matches what ts-morph loads, avoiding phantom files (e.g. `bin/astmap.js`).
+`files.ts` reads `tsconfig.json` to find `rootDir` or `include` patterns before walking. This ensures the file set matches what ts-morph loads, avoiding phantom files (e.g. `bin/sherpa.js`).
 
 ### Default export renaming
 
@@ -79,7 +79,7 @@ Total reduction: **~−61%** from baseline.
 
 - **TypeScript compiler startup**: Incremental analysis for changed files still invokes ts-morph, which loads the TypeScript compiler. This costs ~1-3s per run regardless of how many files changed. The 0-change case is instant.
 
-- **Watch mode limitation on Linux**: `astmap watch` uses `fs.watch({ recursive: true })`, which works reliably on macOS and Windows but has known issues on Linux (requires inotify, limited to non-NFS filesystems).
+- **Watch mode limitation on Linux**: `sherpa watch` uses `fs.watch({ recursive: true })`, which works reliably on macOS and Windows but has known issues on Linux (requires inotify, limited to non-NFS filesystems).
 
 - **JS projects**: Supported (`allowJs: true` when no tsconfig), but without type information — signatures degrade to inferred types which may be verbose or wrong.
 
@@ -99,13 +99,13 @@ Total reduction: **~−61%** from baseline.
 ### Features
 
 - **`--full-graph` flag**: Restore `←` (imports) lines in the Import Graph for when you need the dependency direction, not just the importedBy direction.
-- **`astmap query <symbol>`**: Print the manifest lines relevant to a single symbol — useful for scripting.
+- **`sherpa query <symbol>`**: Print the manifest lines relevant to a single symbol — useful for scripting.
 - **Monorepo support**: Auto-detect workspaces and generate per-package manifests, then merge into a root manifest with package-prefixed aliases (`$core/`, `$ui/`).
-- **CLAUDE.md auto-patch**: `astmap init` could write the `@.claude/manifest.md` reference directly into CLAUDE.md instead of just printing the snippet.
+- **CLAUDE.md auto-patch**: `sherpa init` could write the `@.claude/manifest.md` reference directly into CLAUDE.md instead of just printing the snippet.
 
 ## Transparency — manifest is gitignored
 
-`astmap init` automatically patches the host project's `.gitignore` to exclude both `.claude/manifest.md` and `.claude/manifest.cache.json`. The manifest is local-only: each developer generates their own copy. The only thing that enters the host repo is the `CLAUDE.md` reference (two lines).
+`sherpa init` automatically patches the host project's `.gitignore` to exclude both `.claude/manifest.md` and `.claude/manifest.cache.json`. The manifest is local-only: each developer generates their own copy. The only thing that enters the host repo is the `CLAUDE.md` reference (two lines).
 
 The `patchGitignore(cwd)` function in `src/commands/init.ts` appends the lines only if not already present, and handles both missing and existing `.gitignore` files.
 
@@ -116,10 +116,10 @@ pnpm run build        # tsc → dist/
 pnpm run dev          # ts-node src/cli.ts (no build needed)
 
 # Test on this repo
-node bin/astmap.js generate --full
+node bin/sherpa.js generate --full
 
 # Test on another project
-node bin/astmap.js generate --cwd /path/to/project --full
+node bin/sherpa.js generate --cwd /path/to/project --full
 ```
 
 ## Token threshold

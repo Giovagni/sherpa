@@ -5,7 +5,7 @@ function generateManifest(result, generatedAt = new Date(), opts = {}) {
     const aliases = opts.aliases ?? [];
     const aliasPath = (p) => applyAlias(p, aliases);
     const lines = [];
-    lines.push(`# astmap — Codebase Index`);
+    lines.push(`# sherpa — Codebase Index`);
     lines.push(`<!-- ${generatedAt.toISOString()} | ${result.files} files | ${result.symbols.length} symbols -->`);
     // Declare path aliases so the reader can resolve them back to real paths.
     const activeAliases = aliases.filter(([prefix]) => result.exports.some(e => e.file.startsWith(prefix)) ||

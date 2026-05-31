@@ -39,8 +39,8 @@ const fs = __importStar(require("fs"));
 const path = __importStar(require("path"));
 const files_1 = require("./files");
 const HOOK_SCRIPT = `#!/bin/sh
-# astmap post-commit hook — regenerate manifest on every commit
-astmap generate --cwd "$(git rev-parse --show-toplevel)"
+# sherpa post-commit hook — regenerate manifest on every commit
+sherpa generate --cwd "$(git rev-parse --show-toplevel)"
 `;
 function installPostCommitHook(cwd) {
     const hooksDir = path.join(cwd, ".git", "hooks");
@@ -53,17 +53,17 @@ function installPostCommitHook(cwd) {
     }
     if (fs.existsSync(hookPath)) {
         const existing = fs.readFileSync(hookPath, "utf8");
-        if (existing.includes("astmap generate")) {
+        if (existing.includes("sherpa generate")) {
             return {
                 installed: false,
-                message: "post-commit hook already contains astmap — skipping.",
+                message: "post-commit hook already contains sherpa — skipping.",
             };
         }
         fs.appendFileSync(hookPath, "\n" + HOOK_SCRIPT);
         fs.chmodSync(hookPath, 0o755);
         return {
             installed: true,
-            message: "Appended astmap to existing post-commit hook.",
+            message: "Appended sherpa to existing post-commit hook.",
         };
     }
     fs.writeFileSync(hookPath, HOOK_SCRIPT, { mode: 0o755 });

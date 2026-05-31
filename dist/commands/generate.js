@@ -51,7 +51,7 @@ async function runGenerate(cwd, opts = {}) {
     const config = (0, config_1.loadConfig)(cwd);
     let result;
     if (opts.full) {
-        console.log(`astmap: full analysis of ${cwd}…`);
+        console.log(`sherpa: full analysis of ${cwd}…`);
         result = (0, analyzer_1.analyze)(cwd);
     }
     else {
@@ -60,7 +60,7 @@ async function runGenerate(cwd, opts = {}) {
         const mode = changed === 0
             ? `incremental (${cached} files cached, 0 changed)`
             : `incremental (${cached} cached, ${changed} re-analyzed)`;
-        console.log(`astmap: ${mode}`);
+        console.log(`sherpa: ${mode}`);
     }
     const manifest = (0, manifest_1.generateManifest)(result, new Date(), {
         allSymbols: opts.allSymbols,
@@ -72,7 +72,7 @@ async function runGenerate(cwd, opts = {}) {
     fs.writeFileSync(outPath, manifest, 'utf8');
     const elapsed = Date.now() - start;
     const tokens = (0, tokens_1.estimateTokens)(manifest);
-    console.log(`astmap: wrote ${outPath}`);
+    console.log(`sherpa: wrote ${outPath}`);
     console.log(`  files: ${result.files} | symbols: ${result.symbols.length} | ~${tokens} tokens | ${elapsed}ms`);
     if (tokens > tokens_1.TOKEN_WARN_THRESHOLD) {
         console.warn(`  warning: manifest exceeds ${tokens_1.TOKEN_WARN_THRESHOLD} tokens — consider adding filters`);

@@ -36,13 +36,13 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.loadConfig = loadConfig;
 const fs = __importStar(require("fs"));
 const path = __importStar(require("path"));
-// Kept as fallback so existing projects without astmap.config.json
+// Kept as fallback so existing projects without sherpa.config.json
 // still get the $lib/ alias for src/components/library/.
 const DEFAULT_ALIASES = [
     ['src/components/library/', '$lib/'],
 ];
 function loadConfig(cwd) {
-    const configPath = path.join(cwd, 'astmap.config.json');
+    const configPath = path.join(cwd, 'sherpa.config.json');
     try {
         const raw = JSON.parse(fs.readFileSync(configPath, 'utf8'));
         if (raw.aliases && typeof raw.aliases === 'object' && !Array.isArray(raw.aliases)) {

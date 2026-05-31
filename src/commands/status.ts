@@ -11,10 +11,10 @@ export function statusCommand(opts: StatusOptions): void {
   const stale = isManifestStale(cwd, manifestPath);
 
   if (stale) {
-    console.log('astmap: manifest is STALE — run `astmap generate` to update');
+    console.log('sherpa: manifest is STALE — run `sherpa generate` to update');
     process.exit(1);
   } else {
-    console.log('astmap: manifest is up to date');
+    console.log('sherpa: manifest is up to date');
     process.exit(0);
   }
 }

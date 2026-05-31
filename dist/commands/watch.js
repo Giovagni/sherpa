@@ -41,9 +41,9 @@ const SOURCE_EXTENSIONS = new Set(['.ts', '.tsx', '.js', '.jsx']);
 const DEBOUNCE_MS = 200;
 async function watchCommand(opts) {
     const cwd = path.resolve(opts.cwd);
-    console.log('astmap: watch mode — running initial analysis…');
+    console.log('sherpa: watch mode — running initial analysis…');
     await (0, generate_1.runGenerate)(cwd);
-    console.log('astmap: watching for changes (Ctrl+C to stop)…');
+    console.log('sherpa: watching for changes (Ctrl+C to stop)…');
     let timer = null;
     const watcher = fs.watch(cwd, { recursive: true }, (_event, filename) => {
         if (!filename)
@@ -59,16 +59,16 @@ async function watchCommand(opts) {
             clearTimeout(timer);
         timer = setTimeout(async () => {
             const rel = path.relative(cwd, path.join(cwd, filename));
-            console.log(`\nastmap: change detected in ${rel}`);
+            console.log(`\nsherpa: change detected in ${rel}`);
             await (0, generate_1.runGenerate)(cwd);
         }, DEBOUNCE_MS);
     });
     watcher.on('error', (err) => {
-        console.error('astmap: watcher error —', err.message);
+        console.error('sherpa: watcher error —', err.message);
     });
     process.on('SIGINT', () => {
         watcher.close();
-        console.log('\nastmap: watch stopped.');
+        console.log('\nsherpa: watch stopped.');
         process.exit(0);
     });
     // Keep process alive

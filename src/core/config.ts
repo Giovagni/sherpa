@@ -6,14 +6,14 @@ export interface AstmapConfig {
   aliases: Array<[prefix: string, alias: string]>;
 }
 
-// Kept as fallback so existing projects without astmap.config.json
+// Kept as fallback so existing projects without sherpa.config.json
 // still get the $lib/ alias for src/components/library/.
 const DEFAULT_ALIASES: Array<[prefix: string, alias: string]> = [
   ['src/components/library/', '$lib/'],
 ];
 
 export function loadConfig(cwd: string): AstmapConfig {
-  const configPath = path.join(cwd, 'astmap.config.json');
+  const configPath = path.join(cwd, 'sherpa.config.json');
   try {
     const raw = JSON.parse(fs.readFileSync(configPath, 'utf8'));
     if (raw.aliases && typeof raw.aliases === 'object' && !Array.isArray(raw.aliases)) {

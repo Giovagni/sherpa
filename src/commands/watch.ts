@@ -12,9 +12,9 @@ const DEBOUNCE_MS = 200;
 export async function watchCommand(opts: WatchOptions): Promise<void> {
   const cwd = path.resolve(opts.cwd);
 
-  console.log('astmap: watch mode — running initial analysis…');
+  console.log('sherpa: watch mode — running initial analysis…');
   await runGenerate(cwd);
-  console.log('astmap: watching for changes (Ctrl+C to stop)…');
+  console.log('sherpa: watching for changes (Ctrl+C to stop)…');
 
   let timer: ReturnType<typeof setTimeout> | null = null;
 
@@ -31,18 +31,18 @@ export async function watchCommand(opts: WatchOptions): Promise<void> {
     if (timer) clearTimeout(timer);
     timer = setTimeout(async () => {
       const rel = path.relative(cwd, path.join(cwd, filename));
-      console.log(`\nastmap: change detected in ${rel}`);
+      console.log(`\nsherpa: change detected in ${rel}`);
       await runGenerate(cwd);
     }, DEBOUNCE_MS);
   });
 
   watcher.on('error', (err) => {
-    console.error('astmap: watcher error —', err.message);
+    console.error('sherpa: watcher error —', err.message);
   });
 
   process.on('SIGINT', () => {
     watcher.close();
-    console.log('\nastmap: watch stopped.');
+    console.log('\nsherpa: watch stopped.');
     process.exit(0);
   });
 

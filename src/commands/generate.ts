@@ -27,7 +27,7 @@ export async function runGenerate(
   let result: AnalysisResult;
 
   if (opts.full) {
-    console.log(`astmap: full analysis of ${cwd}…`);
+    console.log(`sherpa: full analysis of ${cwd}…`);
     result = analyze(cwd);
   } else {
     const { result: r, changed, cached } = analyzeIncremental(cwd);
@@ -35,7 +35,7 @@ export async function runGenerate(
     const mode = changed === 0
       ? `incremental (${cached} files cached, 0 changed)`
       : `incremental (${cached} cached, ${changed} re-analyzed)`;
-    console.log(`astmap: ${mode}`);
+    console.log(`sherpa: ${mode}`);
   }
 
   const manifest = generateManifest(result, new Date(), {
@@ -52,7 +52,7 @@ export async function runGenerate(
   const elapsed = Date.now() - start;
   const tokens = estimateTokens(manifest);
 
-  console.log(`astmap: wrote ${outPath}`);
+  console.log(`sherpa: wrote ${outPath}`);
   console.log(`  files: ${result.files} | symbols: ${result.symbols.length} | ~${tokens} tokens | ${elapsed}ms`);
 
   if (tokens > TOKEN_WARN_THRESHOLD) {

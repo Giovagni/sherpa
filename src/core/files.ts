@@ -21,7 +21,7 @@ export function findSourceFiles(cwd: string): string[] {
 
 export function loadIgnorePatterns(cwd: string): string[] {
   try {
-    const raw = fs.readFileSync(path.join(cwd, '.astmapignore'), 'utf8');
+    const raw = fs.readFileSync(path.join(cwd, '.sherpaignore'), 'utf8');
     return raw
       .split('\n')
       .map(l => l.trim())

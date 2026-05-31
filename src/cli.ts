@@ -8,8 +8,8 @@ import { watchCommand } from './commands/watch';
 const program = new Command();
 
 program
-  .name('astmap')
-  .description('Static analysis index for AI coding tools')
+  .name('sherpa')
+  .description('Pre-computed codebase index for AI coding tools')
   .version('0.2.0');
 
 program

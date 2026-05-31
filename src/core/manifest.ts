@@ -15,7 +15,7 @@ export function generateManifest(
   const aliasPath = (p: string) => applyAlias(p, aliases);
   const lines: string[] = [];
 
-  lines.push(`# astmap — Codebase Index`);
+  lines.push(`# sherpa — Codebase Index`);
   lines.push(`<!-- ${generatedAt.toISOString()} | ${result.files} files | ${result.symbols.length} symbols -->`);
 
   // Declare path aliases so the reader can resolve them back to real paths.

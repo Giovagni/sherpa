@@ -8,8 +8,8 @@ const stats_1 = require("./commands/stats");
 const watch_1 = require("./commands/watch");
 const program = new commander_1.Command();
 program
-    .name('astmap')
-    .description('Static analysis index for AI coding tools')
+    .name('sherpa')
+    .description('Pre-computed codebase index for AI coding tools')
     .version('0.2.0');
 program
     .command('generate')

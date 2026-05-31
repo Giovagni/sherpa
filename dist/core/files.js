@@ -33,6 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.isNodeModules = isNodeModules;
 exports.findSourceFiles = findSourceFiles;
 exports.loadIgnorePatterns = loadIgnorePatterns;
 exports.matchesIgnore = matchesIgnore;
@@ -42,6 +43,10 @@ const fs = __importStar(require("fs"));
 const path = __importStar(require("path"));
 const SOURCE_EXTENSIONS = new Set(['.ts', '.tsx', '.js', '.jsx']);
 const IGNORE_DIRS = new Set(['node_modules', 'dist', '.git', '.next', 'build', 'out', 'coverage', '.turbo']);
+// Centralized node_modules check — all callers use this instead of ad-hoc includes().
+function isNodeModules(p) {
+    return p.includes('/node_modules/');
+}
 function findSourceFiles(cwd) {
     const roots = getRootsFromTsconfig(cwd);
     const ignorePatterns = loadIgnorePatterns(cwd);
@@ -66,23 +71,23 @@ function loadIgnorePatterns(cwd) {
 function matchesIgnore(relPath, patterns) {
     for (const p of patterns) {
         if (p.endsWith('/')) {
-            // Directory prefix: "src/easteregg/" → qualsiasi file dentro
+            // Directory prefix: "src/easteregg/" matches any file inside
             if (relPath.startsWith(p))
                 return true;
         }
         else if (p.startsWith('*.')) {
-            // Extension glob: "*.test.ts" → qualsiasi file con quella estensione
+            // Extension glob: "*.test.ts" matches any file with that extension
             if (relPath.endsWith(p.slice(1)))
                 return true;
         }
         else if (p.includes('*')) {
-            // Glob generico: converti in regex (es. "src/**/index.ts")
+            // Generic glob: convert to regex (e.g. "src/**/index.ts")
             const regex = new RegExp('^' + p.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*\*/g, '.*').replace(/\*/g, '[^/]*') + '$');
             if (regex.test(relPath))
                 return true;
         }
         else {
-            // Path esatto o prefisso di directory (senza trailing slash)
+            // Exact path or directory prefix (without trailing slash)
             if (relPath === p || relPath.startsWith(p + '/'))
                 return true;
         }
@@ -130,7 +135,7 @@ function walk(dir, cwd, ignorePatterns, results) {
         const full = path.join(dir, entry.name);
         const rel = path.relative(cwd, full).replace(/\\/g, '/');
         if (entry.isDirectory()) {
-            // Controlla a livello di directory per non ricorrere dentro path ignorati
+            // Check at directory level to avoid recursing into ignored paths
             if (!matchesIgnore(rel + '/', ignorePatterns)) {
                 walk(full, cwd, ignorePatterns, results);
             }
@@ -166,13 +171,8 @@ function resolveImportPath(fromFile, spec) {
 function extractRawImports(absPath) {
     try {
         const content = fs.readFileSync(absPath, 'utf8');
-        const imports = [];
         const re = /(?:from\s+|require\s*\(\s*)['"](\.[^'"]+)['"]/g;
-        let m;
-        while ((m = re.exec(content)) !== null) {
-            imports.push(m[1]);
-        }
-        return imports;
+        return [...content.matchAll(re)].map(m => m[1]);
     }
     catch {
         return [];

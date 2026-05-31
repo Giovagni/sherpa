@@ -46,7 +46,7 @@ function analyze(cwd) {
     const ignorePatterns = (0, files_1.loadIgnorePatterns)(cwd);
     const sourceFiles = project.getSourceFiles().filter(sf => {
         const fp = sf.getFilePath();
-        if (fp.includes('/node_modules/') || fp.includes('/dist/'))
+        if ((0, files_1.isNodeModules)(fp) || fp.includes('/dist/'))
             return false;
         if (ignorePatterns.length === 0)
             return true;
@@ -181,7 +181,7 @@ function reanalyzeFiles(changedPaths, project, cwd, cache) {
             if (!decl)
                 continue;
             const defFile = decl.getSourceFile().getFilePath();
-            if (defFile.includes('node_modules'))
+            if ((0, files_1.isNodeModules)(defFile))
                 continue;
             exportNames.push(name);
             const defRel = toRel(cwd, defFile);
@@ -206,7 +206,7 @@ function reanalyzeFiles(changedPaths, project, cwd, cache) {
             const resolved = imp.getModuleSpecifierSourceFile()?.getFilePath() ??
                 (0, files_1.resolveImportPath)(abs, spec) ??
                 null;
-            if (resolved && !resolved.includes('node_modules')) {
+            if (resolved && !(0, files_1.isNodeModules)(resolved)) {
                 importsFrom.push(toRel(cwd, resolved));
             }
         }
@@ -224,7 +224,7 @@ function processExports(sf, relPath, cwd, exportsMap, symbols, symbolsSeen) {
         const defFile = toRel(cwd, decl.getSourceFile().getFilePath());
         const displayName = getDisplayName(name, defFile);
         const key = `${displayName}@${defFile}`;
-        if (!symbolsSeen.has(key) && !defFile.includes('node_modules')) {
+        if (!symbolsSeen.has(key) && !(0, files_1.isNodeModules)(defFile)) {
             symbolsSeen.add(key);
             symbols.push({
                 name: displayName,
@@ -248,12 +248,12 @@ function processImports(sf, relPath, cwd, importsMap, importedBy) {
         if (!resolved)
             continue;
         const resolvedRel = toRel(cwd, resolved.getFilePath());
-        if (resolvedRel.includes('node_modules'))
+        if ((0, files_1.isNodeModules)(resolvedRel))
             continue;
         importedFiles.push(resolvedRel);
-        const list = importedBy.get(resolvedRel) ?? [];
-        list.push(relPath);
-        importedBy.set(resolvedRel, list);
+        if (!importedBy.has(resolvedRel))
+            importedBy.set(resolvedRel, []);
+        importedBy.get(resolvedRel).push(relPath);
     }
     if (importedFiles.length > 0)
         importsMap.push({ file: relPath, importsFrom: importedFiles });
@@ -263,9 +263,9 @@ function buildCacheFromResult(cwd, sourceFiles, exportsMap, importsMap, symbols)
     const importsByFile = new Map(importsMap.map(i => [i.file, i.importsFrom]));
     const symbolsByFile = new Map();
     for (const sym of symbols) {
-        const list = symbolsByFile.get(sym.file) ?? [];
-        list.push(sym);
-        symbolsByFile.set(sym.file, list);
+        if (!symbolsByFile.has(sym.file))
+            symbolsByFile.set(sym.file, []);
+        symbolsByFile.get(sym.file).push(sym);
     }
     const files = {};
     for (const sf of sourceFiles) {
@@ -326,22 +326,25 @@ function getSignature(decl) {
     }
     return undefined;
 }
-// Fix 1: per i default export usa il basename del file come nome nel symbol index.
-// Così i componenti React sono cercabili per nome ("Calculator") invece di "default".
+// Renames `default` exports to the filename stem so the Symbol Index uses readable names
+// ("Calculator") instead of repeated "default". Barrel index.ts → parent directory name.
 function getDisplayName(exportName, defRelPath) {
     if (exportName !== 'default')
         return exportName;
     const base = path.basename(defRelPath, path.extname(defRelPath));
-    // Per i barrel file (index.ts), usa il nome della directory padre
     if (base === 'index')
         return path.basename(path.dirname(defRelPath));
     return base;
 }
-// Fix 2: il TypeScript compiler risolve i return type JSX in path assoluti verso
-// node_modules. Li sostituiamo con JSX.Element che è leggibile e non locale.
+// Simplifies verbose return types emitted by the TypeScript compiler.
 function simplifyReturnType(text) {
-    if (text.includes('node_modules') && (text.includes('@types/react') || text.includes('/react'))) {
+    // node_modules react paths → JSX.Element
+    if ((0, files_1.isNodeModules)(text) && (text.includes('@types/react') || text.includes('/react'))) {
         return 'JSX.Element';
+    }
+    // Local absolute import paths: import("/abs/path/to/file").TypeName → TypeName
+    if (text.includes('import("')) {
+        text = text.replace(/import\("[^"]*"\)\./g, '');
     }
     if (text.startsWith('{') && text.length > 60)
         return '{…}';

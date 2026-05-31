@@ -1,3 +1,4 @@
+export declare function isNodeModules(p: string): boolean;
 export declare function findSourceFiles(cwd: string): string[];
 export declare function loadIgnorePatterns(cwd: string): string[];
 export declare function matchesIgnore(relPath: string, patterns: string[]): boolean;

@@ -57,20 +57,21 @@ Uses `ts-morph` (TypeScript Compiler API wrapper) instead of regex parsing. This
 
 ## Manifest optimizations (history)
 
-Four rounds of optimization reduced the manifest for `web-os-portfolio` (111 files):
+Five rounds of optimization on `web-os-portfolio` (111 files):
 
-| Round | Change                                                                   | Tokens    | Δ    |
-| ----- | ------------------------------------------------------------------------ | --------- | ---- |
-| 0     | Original markdown format                                                 | 8,783     | —    |
-| 1     | Compact format (1 line/entry, no bold/backtick overhead)                 | 6,781     | −23% |
-| 2     | Filter barrel index.ts from Exports + string-literal consts from Symbols | 6,015     | −11% |
-| 3     | Drop `←` lines (redundant with `→`) + `$lib/` alias (276 occurrences)    | **3,914** | −35% |
+| Round | Change | Tokens | Δ |
+| --- | --- | --- | --- |
+| 0 | Original markdown format | 8,783 | — |
+| 1 | Compact format (1 line/entry, no bold/backtick overhead) | 6,781 | −23% |
+| 2 | Filter barrel `index.ts` from Exports + string-literal consts from Symbols | 6,015 | −11% |
+| 3 | Drop `←` lines (redundant with `→`) + `$lib/` alias (276 occurrences) | 3,914 | −35% |
+| 4 | Filter all default-only files from Exports + fix local abs path in signatures | **~3,400** | −13% |
 
-Total reduction: **−55%** from baseline.
+Total reduction: **~−61%** from baseline.
 
 ## Known limitations and edge cases
 
-- **`←` lines are dropped**: The Import Graph only shows `→` (importedBy). If you need "what does file X import?", reconstruct from `→` lines (if A → B C, then A imports B and C) or use `--all-symbols` (note: this flag restores symbols, not `←` lines — adding a `--full-graph` flag is a future option).
+- **`←` lines are dropped**: The Import Graph only shows `→` (importedBy). If you need "what does file X import?", reconstruct from `→` lines (if A → B C, then A imports B and C). A future `--full-graph` flag could restore `←` lines.
 
 - **Barrel files and Symbol Index**: ts-morph follows re-exports to their source file, so `Calculator/index.ts` and `Calculator/Calculator.tsx` map to the same symbol entry — no duplicates. The dedup key is `${displayName}@${defRelPath}`.
 
@@ -98,10 +99,17 @@ Total reduction: **−55%** from baseline.
 
 ### Features
 
+- **`--full-graph` flag**: Restore `←` (imports) lines in the Import Graph for when you need the dependency direction, not just the importedBy direction.
 - **`astmap watch`**: File watcher that runs incremental analysis on save. Could use `chokidar` or native `fs.watch`.
 - **`astmap query <symbol>`**: Print the manifest lines relevant to a single symbol — useful for scripting.
 - **Monorepo support**: Auto-detect workspaces and generate per-package manifests, then merge into a root manifest with package-prefixed aliases (`$core/`, `$ui/`).
 - **CLAUDE.md auto-patch**: `astmap init` could write the `@.claude/manifest.md` reference directly into CLAUDE.md instead of just printing the snippet.
+
+## Transparency — manifest is gitignored
+
+`astmap init` automatically patches the host project's `.gitignore` to exclude both `.claude/manifest.md` and `.claude/manifest.cache.json`. The manifest is local-only: each developer generates their own copy. The only thing that enters the host repo is the `CLAUDE.md` reference (two lines).
+
+The `patchGitignore(cwd)` function in `src/commands/init.ts` appends the lines only if not already present, and handles both missing and existing `.gitignore` files.
 
 ## Running locally
 

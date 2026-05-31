@@ -17,11 +17,12 @@ function generateManifest(result, generatedAt = new Date(), opts = {}) {
     }
     lines.push('');
     // Layer 1: Exports — one line per file
-    // Barrel index.ts files that only re-export `default` are skipped (no unique info).
+    // Files that export only `default` are skipped: the Symbol Index already has them
+    // with a readable name (e.g. Calculator, App). --all-symbols restores them.
     lines.push('## Exports');
     const sortedExports = [...result.exports].sort((a, b) => a.file.localeCompare(b.file));
     for (const { file, names } of sortedExports) {
-        if (!opts.allSymbols && isBarrel(file, names))
+        if (!opts.allSymbols && isDefaultOnly(names))
             continue;
         lines.push(`${alias(file)}: ${names.join(' ')}`);
     }
@@ -57,9 +58,8 @@ function alias(p) {
     }
     return p;
 }
-function isBarrel(file, names) {
-    return (file.endsWith('/index.ts') || file.endsWith('/index.tsx')) &&
-        names.length === 1 && names[0] === 'default';
+function isDefaultOnly(names) {
+    return names.length === 1 && names[0] === 'default';
 }
 function isStringLiteralConst(sym) {
     return sym.kind === 'const' && /^"[^"]*"$/.test(sym.signature ?? '');

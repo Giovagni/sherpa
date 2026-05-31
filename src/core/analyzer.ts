@@ -7,7 +7,7 @@ import {
 } from 'ts-morph';
 import * as path from 'path';
 import * as fs from 'fs';
-import { findSourceFiles, resolveImportPath, extractRawImports, loadIgnorePatterns, matchesIgnore } from './files';
+import { findSourceFiles, resolveImportPath, extractRawImports, loadIgnorePatterns, matchesIgnore, isNodeModules } from './files';
 import { loadCache, saveCache, reconstructFromCache, ManifestCache } from './cache';
 
 export interface FileExports {
@@ -42,7 +42,7 @@ export function analyze(cwd: string): AnalysisResult {
   const ignorePatterns = loadIgnorePatterns(cwd);
   const sourceFiles = project.getSourceFiles().filter(sf => {
     const fp = sf.getFilePath();
-    if (fp.includes('/node_modules/') || fp.includes('/dist/')) return false;
+    if (isNodeModules(fp) || fp.includes('/dist/')) return false;
     if (ignorePatterns.length === 0) return true;
     return !matchesIgnore(toRel(cwd, fp), ignorePatterns);
   });
@@ -196,7 +196,7 @@ function reanalyzeFiles(changedPaths: string[], project: Project, cwd: string, c
       const decl = decls[0];
       if (!decl) continue;
       const defFile = decl.getSourceFile().getFilePath();
-      if (defFile.includes('node_modules')) continue;
+      if (isNodeModules(defFile)) continue;
 
       exportNames.push(name);
 
@@ -223,7 +223,7 @@ function reanalyzeFiles(changedPaths: string[], project: Project, cwd: string, c
         imp.getModuleSpecifierSourceFile()?.getFilePath() ??
         resolveImportPath(abs, spec) ??
         null;
-      if (resolved && !resolved.includes('node_modules')) {
+      if (resolved && !isNodeModules(resolved)) {
         importsFrom.push(toRel(cwd, resolved));
       }
     }
@@ -252,7 +252,7 @@ function processExports(
     const displayName = getDisplayName(name, defFile);
     const key = `${displayName}@${defFile}`;
 
-    if (!symbolsSeen.has(key) && !defFile.includes('node_modules')) {
+    if (!symbolsSeen.has(key) && !isNodeModules(defFile)) {
       symbolsSeen.add(key);
       symbols.push({
         name: displayName,
@@ -284,12 +284,11 @@ function processImports(
     if (!resolved) continue;
 
     const resolvedRel = toRel(cwd, resolved.getFilePath());
-    if (resolvedRel.includes('node_modules')) continue;
+    if (isNodeModules(resolvedRel)) continue;
 
     importedFiles.push(resolvedRel);
-    const list = importedBy.get(resolvedRel) ?? [];
-    list.push(relPath);
-    importedBy.set(resolvedRel, list);
+    if (!importedBy.has(resolvedRel)) importedBy.set(resolvedRel, []);
+    importedBy.get(resolvedRel)!.push(relPath);
   }
 
   if (importedFiles.length > 0) importsMap.push({ file: relPath, importsFrom: importedFiles });
@@ -307,9 +306,8 @@ function buildCacheFromResult(
   const symbolsByFile = new Map<string, SymbolEntry[]>();
 
   for (const sym of symbols) {
-    const list = symbolsByFile.get(sym.file) ?? [];
-    list.push(sym);
-    symbolsByFile.set(sym.file, list);
+    if (!symbolsByFile.has(sym.file)) symbolsByFile.set(sym.file, []);
+    symbolsByFile.get(sym.file)!.push(sym);
   }
 
   const files: ManifestCache['files'] = {};
@@ -370,21 +368,24 @@ function getSignature(decl: ExportedDeclarations): string | undefined {
   return undefined;
 }
 
-// Fix 1: per i default export usa il basename del file come nome nel symbol index.
-// Così i componenti React sono cercabili per nome ("Calculator") invece di "default".
+// Renames `default` exports to the filename stem so the Symbol Index uses readable names
+// ("Calculator") instead of repeated "default". Barrel index.ts → parent directory name.
 function getDisplayName(exportName: string, defRelPath: string): string {
   if (exportName !== 'default') return exportName;
   const base = path.basename(defRelPath, path.extname(defRelPath));
-  // Per i barrel file (index.ts), usa il nome della directory padre
   if (base === 'index') return path.basename(path.dirname(defRelPath));
   return base;
 }
 
-// Fix 2: il TypeScript compiler risolve i return type JSX in path assoluti verso
-// node_modules. Li sostituiamo con JSX.Element che è leggibile e non locale.
+// Simplifies verbose return types emitted by the TypeScript compiler.
 function simplifyReturnType(text: string): string {
-  if (text.includes('node_modules') && (text.includes('@types/react') || text.includes('/react'))) {
+  // node_modules react paths → JSX.Element
+  if (isNodeModules(text) && (text.includes('@types/react') || text.includes('/react'))) {
     return 'JSX.Element';
+  }
+  // Local absolute import paths: import("/abs/path/to/file").TypeName → TypeName
+  if (text.includes('import("')) {
+    text = text.replace(/import\("[^"]*"\)\./g, '');
   }
   if (text.startsWith('{') && text.length > 60) return '{…}';
   return text;

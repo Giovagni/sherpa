@@ -26,17 +26,12 @@ The manifest is committed to your repo. Teammates get it for free on pull.
 ### 1. Install
 
 ```bash
-# npm
-npm install -g github:Giovagni/astmap
-
-# pnpm
-pnpm install -g github:Giovagni/astmap
-
-# yarn
-yarn global add github:Giovagni/astmap
+pnpm add -g github:Giovagni/astmap
 ```
 
-Requires Node.js ≥ 18. No build step — the compiled binary is included in the repo.
+Requires Node.js ≥ 18 and pnpm ≥ 8. No build step — the compiled binary is included in the repo.
+
+> **npm alternative:** `npm install -g github:Giovagni/astmap`
 
 To update to the latest version, run the same install command again.
 
@@ -47,8 +42,9 @@ cd /your/project
 astmap init
 ```
 
-This does three things:
+This does four things:
 - Generates `.claude/manifest.md` (first full analysis, ~5–15s depending on project size)
+- Adds `.claude/manifest.md` and `.claude/manifest.cache.json` to the project's `.gitignore` — the manifest is **never committed**, it lives only on your machine
 - Installs a git post-commit hook so the manifest auto-updates on every commit
 - Prints the snippet to add to your `CLAUDE.md`
 
@@ -60,18 +56,19 @@ Create or open `CLAUDE.md` at your project root and add:
 ## Codebase Index
 
 See @.claude/manifest.md for symbol definitions, exports, and dependency graph.
+Run `astmap init` once to generate it locally (the file is gitignored — each developer generates their own).
 ```
 
-The `@` prefix tells Claude Code to load the file as context at session start. From this point, Claude reads the manifest once and uses it for the rest of the session instead of exploring the codebase file by file.
+The `@` prefix tells Claude Code to load the file as context at session start. The manifest is gitignored, so each developer who wants AI-assisted navigation runs `astmap init` once on their machine.
 
-### 4. Commit both files
+### 4. Commit CLAUDE.md
 
 ```bash
-git add .claude/manifest.md CLAUDE.md
-git commit -m "add astmap manifest"
+git add CLAUDE.md
+git commit -m "add astmap context reference"
 ```
 
-Done. Future commits will keep the manifest fresh automatically.
+Done. Future commits will keep your local manifest fresh automatically.
 
 ---
 
@@ -148,11 +145,12 @@ Three sections, each built for a different query type.
 
 ### Exports
 
-One line per file — what each file exposes publicly.
+One line per file — what each file exposes publicly. Files that export only `default` are omitted (already covered by the Symbol Index with a readable name).
 
 ```
 src/actions/tasks.ts: closeApp closeAllApps launchApp TaskActionTypes ...
 src/reducers/index.ts: RootState default
+src/types/index.ts: Task DisplayState VolumeState ContextMenuOption Position
 ```
 
 ### Import Graph
@@ -198,6 +196,24 @@ The cache (`.claude/manifest.cache.json`) is local and gitignored — each devel
 
 ---
 
+## Updating astmap itself
+
+Since `dist/` is committed to the repo, after modifying the source you must rebuild before committing:
+
+```bash
+pnpm run build
+git add dist/ src/
+git commit -m "..."
+```
+
+Users who installed via `pnpm add -g github:Giovagni/astmap` update by re-running the same command:
+
+```bash
+pnpm add -g github:Giovagni/astmap
+```
+
+---
+
 ## Known limitations
 
 - **TypeScript/JS only** — `.js`/`.jsx` supported but without type information
@@ -212,6 +228,6 @@ The cache (`.claude/manifest.cache.json`) is local and gitignored — each devel
 
 | File | Description |
 | --- | --- |
-| `.claude/manifest.md` | The index — **commit this** to your repo |
-| `.claude/manifest.cache.json` | Incremental cache — add to `.gitignore` |
+| `.claude/manifest.md` | Local only — gitignored by `astmap init`, never committed |
+| `.claude/manifest.cache.json` | Incremental cache — gitignored by `astmap init` |
 | `.git/hooks/post-commit` | Git hook installed by `astmap init` |

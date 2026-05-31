@@ -36,7 +36,6 @@ export interface AnalysisResult {
   symbols: SymbolEntry[];
 }
 
-// Full analysis — loads all source files via ts-morph for accurate types.
 export function analyze(cwd: string): AnalysisResult {
   const project = buildProject(cwd);
   const ignorePatterns = loadIgnorePatterns(cwd);
@@ -59,15 +58,12 @@ export function analyze(cwd: string): AnalysisResult {
     processImports(sf, rel, cwd, importsMap, importedBy);
   }
 
-  // Write cache after full analysis
   const cache = buildCacheFromResult(cwd, sourceFiles, exportsMap, importsMap, symbols);
   saveCache(cwd, cache);
 
   return { files: sourceFiles.length, exports: exportsMap, imports: importsMap, importedBy, symbols };
 }
 
-// Incremental analysis — only re-parses changed files, uses cache for the rest.
-// Falls back to full analysis if no cache exists.
 export function analyzeIncremental(cwd: string): { result: AnalysisResult; changed: number; cached: number } {
   const cache = loadCache(cwd);
   const allFiles = findSourceFiles(cwd);
@@ -88,7 +84,6 @@ export function analyzeIncremental(cwd: string): { result: AnalysisResult; chang
     }
   }
 
-  // Remove deleted files from cache
   let deletedCount = 0;
   for (const rel of Object.keys(cache.files)) {
     if (!currentRels.has(rel)) {
@@ -97,9 +92,9 @@ export function analyzeIncremental(cwd: string): { result: AnalysisResult; chang
     }
   }
 
-  // Nothing changed — reconstruct directly from cache (no ts-morph at all)
+  // Nothing changed — reconstruct directly from cache (no ts-morph at all).
   if (changedPaths.length === 0) {
-    // Persist the cache if we removed deleted files, so we don't repeat the work next run.
+    // Persist updated cache if we removed deleted files, to avoid repeating the work next run.
     if (deletedCount > 0) {
       cache.generatedAt = new Date().toISOString();
       saveCache(cwd, cache);
@@ -107,7 +102,6 @@ export function analyzeIncremental(cwd: string): { result: AnalysisResult; chang
     return { result: reconstructFromCache(cache), changed: 0, cached: Object.keys(cache.files).length };
   }
 
-  // Some files changed — build a mini project with changed files + their local imports
   const contextPaths = collectContext(changedPaths, cwd, cache);
   const project = buildProjectForFiles(cwd, [...contextPaths]);
 
@@ -122,8 +116,6 @@ export function analyzeIncremental(cwd: string): { result: AnalysisResult; chang
     cached: Object.keys(cache.files).length - changedPaths.length,
   };
 }
-
-// ── helpers ──────────────────────────────────────────────────────────────────
 
 function buildProject(cwd: string): Project {
   const tsconfigPath = path.join(cwd, 'tsconfig.json');
@@ -155,12 +147,10 @@ function buildProjectForFiles(cwd: string, absPaths: string[]): Project {
   return project;
 }
 
-// Collect the changed files + their direct imports (for type resolution context).
 function collectContext(changedPaths: string[], cwd: string, cache: ManifestCache): Set<string> {
   const context = new Set<string>(changedPaths);
 
   for (const abs of changedPaths) {
-    // Try cached import list first (fast)
     const rel = toRel(cwd, abs);
     const cached = cache.files[rel];
     if (cached) {
@@ -169,7 +159,6 @@ function collectContext(changedPaths: string[], cwd: string, cache: ManifestCach
         if (fs.existsSync(depAbs)) context.add(depAbs);
       }
     }
-    // Also scan the file directly (it may have new imports not in cache)
     for (const spec of extractRawImports(abs)) {
       const resolved = resolveImportPath(abs, spec);
       if (resolved) context.add(resolved);
@@ -368,8 +357,6 @@ function getSignature(decl: ExportedDeclarations): string | undefined {
   return undefined;
 }
 
-// Renames `default` exports to the filename stem so the Symbol Index uses readable names
-// ("Calculator") instead of repeated "default". Barrel index.ts → parent directory name.
 function getDisplayName(exportName: string, defRelPath: string): string {
   if (exportName !== 'default') return exportName;
   const base = path.basename(defRelPath, path.extname(defRelPath));
@@ -377,13 +364,12 @@ function getDisplayName(exportName: string, defRelPath: string): string {
   return base;
 }
 
-// Simplifies verbose return types emitted by the TypeScript compiler.
 function simplifyReturnType(text: string): string {
   // node_modules react paths → JSX.Element
   if (isNodeModules(text) && (text.includes('@types/react') || text.includes('/react'))) {
     return 'JSX.Element';
   }
-  // Local absolute import paths: import("/abs/path/to/file").TypeName → TypeName
+  // local absolute import paths: import("/abs/path").TypeName → TypeName
   if (text.includes('import("')) {
     text = text.replace(/import\("[^"]*"\)\./g, '');
   }

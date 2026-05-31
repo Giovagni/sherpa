@@ -43,7 +43,6 @@ const fs = __importStar(require("fs"));
 const path = __importStar(require("path"));
 const SOURCE_EXTENSIONS = new Set(['.ts', '.tsx', '.js', '.jsx']);
 const IGNORE_DIRS = new Set(['node_modules', 'dist', '.git', '.next', 'build', 'out', 'coverage', '.turbo']);
-// Centralized node_modules check — all callers use this instead of ad-hoc includes().
 function isNodeModules(p) {
     return p.includes('/node_modules/');
 }
@@ -71,23 +70,19 @@ function loadIgnorePatterns(cwd) {
 function matchesIgnore(relPath, patterns) {
     for (const p of patterns) {
         if (p.endsWith('/')) {
-            // Directory prefix: "src/easteregg/" matches any file inside
             if (relPath.startsWith(p))
                 return true;
         }
         else if (p.startsWith('*.')) {
-            // Extension glob: "*.test.ts" matches any file with that extension
             if (relPath.endsWith(p.slice(1)))
                 return true;
         }
         else if (p.includes('*')) {
-            // Generic glob: convert to regex (e.g. "src/**/index.ts")
             const regex = new RegExp('^' + p.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*\*/g, '.*').replace(/\*/g, '[^/]*') + '$');
             if (regex.test(relPath))
                 return true;
         }
         else {
-            // Exact path or directory prefix (without trailing slash)
             if (relPath === p || relPath.startsWith(p + '/'))
                 return true;
         }

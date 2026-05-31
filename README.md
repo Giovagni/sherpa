@@ -1,10 +1,22 @@
-# sherpa
+<div align="center">
+  <img src=".github/logo.svg" width="88" height="88" alt="sherpa logo" />
+  <h1>sherpa</h1>
+  <p>Pre-computed codebase index for AI coding tools</p>
 
-Pre-computed codebase index for AI coding tools. Generates `.claude/manifest.md` — exports, import graph, and symbol signatures — loaded once per session so AI assistants can answer structural questions without exploratory grep/file calls.
+  ![version](https://img.shields.io/badge/version-0.2.0-3b82f6?style=flat-square)
+  ![node](https://img.shields.io/badge/node-%E2%89%A518-22c55e?style=flat-square)
+  ![license](https://img.shields.io/badge/license-MIT-f59e0b?style=flat-square)
+</div>
+
+---
+
+Every AI session on an unfamiliar codebase starts the same way: grep for a symbol, read a file, follow an import, read another file — three to five tool calls before a single line of code changes.
+
+Sherpa pre-computes the answers. It runs static analysis on your TypeScript/JavaScript project and writes `.claude/manifest.md` — a compact index of exports, the import graph, and every symbol's type signature. Load it once per session via `CLAUDE.md`. From that point on, structural questions cost a manifest lookup instead of a file crawl.
 
 ```
-Without sherpa: grep → cat → cat  (~3 calls, ~2,900 tokens)
-With sherpa:    manifest already in context  (~69 tokens)
+without sherpa   grep → cat → cat   3 calls · ~2,900 tokens
+with sherpa      manifest in context            0 calls ·    ~69 tokens   −97%
 ```
 
 ## Install
@@ -22,7 +34,7 @@ cd /your/project
 sherpa init
 ```
 
-`init` generates `.claude/manifest.md`, adds it to `.gitignore`, installs a git post-commit hook, and prints the snippet to add to `CLAUDE.md`:
+`init` generates `.claude/manifest.md`, adds it to `.gitignore`, installs a git post-commit hook, and prints the snippet for `CLAUDE.md`:
 
 ```markdown
 ## Codebase Index
@@ -31,13 +43,13 @@ See @.claude/manifest.md for symbol definitions, exports, and dependency graph.
 Run `sherpa init` once to generate it locally (gitignored — each developer generates their own).
 ```
 
-The `@` prefix tells Claude Code to load the manifest as context at session start.
+The `@` prefix tells Claude Code to load the manifest as context at session start. Commit `CLAUDE.md` — teammates get the reference for free on pull, and run `sherpa init` once on their machine to generate their own local copy.
 
 ## Commands
 
 | Command | Description |
 | --- | --- |
-| `sherpa generate` | Incremental — only re-parses changed files |
+| `sherpa generate` | Incremental — only re-parses changed files (~20ms if nothing changed) |
 | `sherpa generate --full` | Force full re-analysis |
 | `sherpa generate --all-symbols` | Include filtered constants and default-only exports |
 | `sherpa watch` | Watch for file changes and regenerate automatically |
@@ -49,7 +61,9 @@ The `@` prefix tells Claude Code to load the manifest as context at session star
 
 ## Manifest format
 
-**Exports** — what each file exposes publicly:
+Three sections, each targeting a different query type.
+
+**Exports** — what each file exposes:
 ```
 src/types/index.ts: Task DisplayState VolumeState ContextMenuOption Position
 src/reducers/index.ts: RootState default
@@ -67,14 +81,11 @@ closeApp  src/actions/tasks.ts:102  function  (data: { _id: string }) => CloseAp
 RootState src/reducers/index.ts:13  type
 ```
 
-Long path prefixes are compressed with aliases declared in the manifest header:
-```
-<!-- aliases: $lib/=src/components/library/ -->
-```
+Long path prefixes are compressed with aliases declared in the manifest header — configurable per project.
 
-## Configuring aliases
+## Configuration
 
-Create `sherpa.config.json` at the project root:
+Create `sherpa.config.json` at the project root to define path aliases:
 
 ```json
 {
@@ -85,11 +96,11 @@ Create `sherpa.config.json` at the project root:
 }
 ```
 
-Without a config file, sherpa defaults to `$lib/` → `src/components/library/`. When the file is present, it replaces the default entirely — include `$lib/` explicitly if you still want it.
+Without a config file, sherpa defaults to `$lib/` → `src/components/library/`. When the file is present it replaces the default entirely — include `$lib/` explicitly if you still want it.
 
 ## Excluding files
 
-Create `.sherpaignore` at the project root:
+Create `.sherpaignore` to keep the manifest focused:
 
 ```
 src/easteregg/
@@ -98,7 +109,7 @@ src/easteregg/
 src/**/fixtures/**
 ```
 
-Then run `sherpa generate --full`. If `sherpa stats` shows the manifest exceeds 8,000 tokens, this is the first thing to reach for.
+Then run `sherpa generate --full`. If `sherpa stats` reports more than 8,000 tokens, this is the first thing to reach for.
 
 ## Performance
 

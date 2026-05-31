@@ -51,14 +51,10 @@ Run \`sherpa init\` once to generate it locally (the file is gitignored — each
 `;
 async function initCommand(opts) {
     const cwd = path.resolve(opts.cwd);
-    // 1. Generate manifest
     await (0, generate_1.generateCommand)(opts);
-    // 2. Auto-patch .gitignore so the manifest is never committed
     patchGitignore(cwd);
-    // 3. Install git hook
     const hookResult = (0, git_1.installPostCommitHook)(cwd);
     console.log(`sherpa: ${hookResult.message}`);
-    // 4. Suggest CLAUDE.md update
     const claudeMdPath = path.join(cwd, 'CLAUDE.md');
     if (fs.existsSync(claudeMdPath)) {
         const content = fs.readFileSync(claudeMdPath, 'utf8');

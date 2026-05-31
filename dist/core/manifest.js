@@ -14,9 +14,6 @@ function generateManifest(result, generatedAt = new Date(), opts = {}) {
         lines.push(`<!-- aliases: ${activeAliases.map(([p, a]) => `${a}=${p}`).join(', ')} -->`);
     }
     lines.push('');
-    // Layer 1: Exports — one line per file
-    // Files that export only `default` are skipped: the Symbol Index already has them
-    // with a readable name (e.g. Calculator, App). --all-symbols restores them.
     lines.push('## Exports');
     const sortedExports = [...result.exports].sort((a, b) => a.file.localeCompare(b.file));
     for (const { file, names } of sortedExports) {
@@ -25,20 +22,17 @@ function generateManifest(result, generatedAt = new Date(), opts = {}) {
         lines.push(`${aliasPath(file)}: ${names.join(' ')}`);
     }
     lines.push('');
-    // Layer 2: Import Graph — only → (importedBy) lines.
-    // ← (imports) are omitted: they carry the same information as → from the other side.
     lines.push('## Import Graph');
     const allFiles = new Set();
     result.imports.forEach(i => { allFiles.add(i.file); i.importsFrom.forEach(f => allFiles.add(f)); });
     result.importedBy.forEach((_, k) => allFiles.add(k));
     for (const file of [...allFiles].sort()) {
         const importedBy = result.importedBy.get(file) ?? [];
+        // ← lines are omitted: they carry the same information as → from the other side.
         if (importedBy.length > 0)
             lines.push(`${aliasPath(file)} → ${importedBy.map(aliasPath).join(' ')}`);
     }
     lines.push('');
-    // Layer 3: Symbol Index — one line per symbol
-    // String-literal constants (e.g. action type strings "CLOSE_APP") are skipped by default.
     lines.push('## Symbols');
     const sortedSymbols = [...result.symbols].sort((a, b) => a.name.localeCompare(b.name));
     for (const sym of sortedSymbols) {
